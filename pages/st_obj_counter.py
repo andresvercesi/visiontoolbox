@@ -7,28 +7,45 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
+import os
 
 
 det_box =[]
+uploads_path = 'upload_videos'
+model_path = 'yolov8n.pt'
+
 try:
-    model = YOLO("yolov8n.pt")
+    model = YOLO(model_path)
 except Exception as ex:
     st.error(
         f"Unable to load model. Check the specified path: {model_path}")
     st.error(ex)
 
-st.write("Objects count in a region of video") #Web page title
+
+st.write("Objects count in video using YOLO") #Web page title
+
 video_file = st.file_uploader('Video File')
 
+option = st.selectbox(
+    'Select count type',
+    ('Bounding Box', 'Line'))
+if option == 'Bounding Box':
+    detection_type = 'polygon'
+    detection_range = 4
+if option == 'Line':
+    detection_type = 'line'
+    detection_range = 2
+
 if video_file is not None:
-    vid = video_file.name
+    vid = os.path.join(uploads_path, video_file.name )
     with open(vid, mode='wb') as f:
         f.write(video_file.read()) # save video to disk
 
     vidcap = cv2.VideoCapture(vid) # load video from disk
     w, h = (int(vidcap.get(x)) for x in (cv2.CAP_PROP_FRAME_WIDTH, cv2.CAP_PROP_FRAME_HEIGHT))
-    w = int(w/3)
-    h = int(h/3)
+    w = int(w/2)
+    h = int(h/2)
+    print(w)
     success, frame = vidcap.read()
     frame = cv2.resize(frame, (w, h))
     bg_image = cv2.imwrite('first_frame.jpg', frame)
@@ -39,7 +56,7 @@ if video_file is not None:
     #print(stroke_color)
     bg_color = "#eee"
     #bg_image = st.sidebar.file_uploader("Background image:", type=["png", "jpg"])
-    bg_image = 'C:/Dev/VisionToolbox/pages/first_frame.jpg'
+    bg_image = 'first_frame.jpg'
     #realtime_update = st.sidebar.checkbox("Update in realtime", True)
     # Create a canvas component
     canvas_result = st_canvas(
@@ -51,7 +68,7 @@ if video_file is not None:
     update_streamlit=True,
     height=h,
     width = w,
-    drawing_mode='polygon',
+    drawing_mode=detection_type,
     display_toolbar= True,
     key="full_app",
 )
@@ -60,12 +77,13 @@ if video_file is not None:
     #    st.image(canvas_result.image_data)
  
     if len(canvas_result.json_data['objects'])==1:
-        for i in range(4):
+        for i in range(detection_range):
             p = []
             for j in range(2):
                 p.append(canvas_result.json_data['objects'][0]['path'][i][j+1])
             det_box.append(p)
         print(len(det_box))
+
 
 
 process_button = st.button('Proccess video')

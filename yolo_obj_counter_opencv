@@ -24,7 +24,7 @@ def mouse_callback(event, x, y, flags, param):
     cv2.imshow('Frame', image)
 
 # Leer el video
-cap = cv2.VideoCapture("C:\Dev\VisionToolbox\sample_videos\poland-traffic.mp4")
+cap = cv2.VideoCapture("D:\Andres\Programacion\visiontoolbox\pages\highway.mp4")
 assert cap.isOpened(), "Error reading video file"
 
 
