@@ -1,0 +1,80 @@
+from ultralytics import YOLO
+from ultralytics.solutions import object_counter
+import cv2
+import numpy as np
+
+model = YOLO("yolov8n.pt")
+
+# Definir la variable global para almacenar los puntos del bounding box
+det_box = []
+#ROI_box = []
+
+def mouse_callback(event, x, y, flags, param):
+    if event == cv2.EVENT_LBUTTONDOWN:
+        if len(det_box) < 4:
+            det_box.append((x, y))
+            print("Point selected:", (x, y))
+            if len(det_box) == 4:
+                print("Bounding box completed:", det_box)
+                # Almacenar los puntos o realizar cualquier otro proceso necesario
+        else:
+            print("Ya se han seleccionado los 4 puntos.")
+    for pt in det_box:
+            cv2.circle(image, pt, radius=5, color=(0, 255, 0), thickness=-1)
+    cv2.imshow('Frame', image)
+
+# Leer el video
+cap = cv2.VideoCapture("C:\Dev\VisionToolbox\sample_videos\poland-traffic.mp4")
+assert cap.isOpened(), "Error reading video file"
+
+
+# Leer el primer frame
+ret, frame = cap.read()
+frame = cv2.resize(frame, (1280, 720))
+image = frame.copy()
+
+# Mostrar el primer frame
+cv2.imshow('Frame', image)
+cv2.setMouseCallback('Frame', mouse_callback)
+
+while True:
+    key = cv2.waitKey(1) & 0xFF
+    if key == 27 or len(det_box) == 4: # Presionar Esc para salir
+        break
+
+"""# Definir la región de interés (ROI) alrededor del bounding box
+x, y, w, h = cv2.selectROI('Frame', frame, fromCenter=False)
+roi = frame[y:y+h, x:x+w]
+
+# Mostrar el bounding box sobre el primer frame
+cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+"""
+cv2.destroyWindow('Frame')
+
+pts = np.array(det_box, np.int32)
+pts = pts.reshape((-1,1,2))
+
+# Init Object Counter
+counter = object_counter.ObjectCounter()
+counter.set_args(view_img=True,
+                 reg_pts=det_box,
+                 classes_names=model.names,
+                 draw_tracks=True)
+
+while True:
+    success, img = cap.read()
+    if not success:
+        print("Video frame is empty or video processing has been successfully completed.")
+        break
+    frame = cv2.resize(img, (1280, 720))    
+    #cv2.polylines(frame, [pts], True, color=(0, 255, 0), thickness=2)
+    tracks = model.track(frame, persist=True, show=False)
+    frame = counter.start_counting(frame, tracks)
+    #cv2.imshow('Frame',frame)
+    if cv2.waitKey(1) == ord('q'):
+        break
+
+cap.release()
+
+#video_writer.release()
+cv2.destroyAllWindows()
