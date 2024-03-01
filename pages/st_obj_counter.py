@@ -11,8 +11,12 @@ import os
 
 
 det_box =[]
-uploads_path = 'upload_videos'
+path_base = os.path.abspath(os.path.dirname(__file__))
+uploads_path = os.path.join(path_base, 'uploads')
 model_path = 'yolov8n.pt'
+
+if not os.path.exists(uploads_path):
+    os.makedirs(uploads_path)
 
 try:
     model = YOLO(model_path)
