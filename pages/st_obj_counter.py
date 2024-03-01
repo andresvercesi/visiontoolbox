@@ -10,10 +10,12 @@ from streamlit_drawable_canvas import st_canvas
 import os
 
 
-det_box =[]
+
 path_base = os.path.abspath(os.path.dirname(__file__))
 uploads_path = os.path.join(path_base, 'uploads')
 model_path = 'yolov8n.pt'
+
+det_box =[]
 
 if not os.path.exists(uploads_path):
     os.makedirs(uploads_path)
@@ -40,7 +42,9 @@ if option == 'Line':
     detection_type = 'line'
     detection_range = 2
 
+
 if video_file is not None:
+   
     vid = os.path.join(uploads_path, video_file.name )
     with open(vid, mode='wb') as f:
         f.write(video_file.read()) # save video to disk
@@ -49,7 +53,6 @@ if video_file is not None:
     w, h = (int(vidcap.get(x)) for x in (cv2.CAP_PROP_FRAME_WIDTH, cv2.CAP_PROP_FRAME_HEIGHT))
     w = int(w/2)
     h = int(h/2)
-    print(w)
     success, frame = vidcap.read()
     frame = cv2.resize(frame, (w, h))
     bg_image = cv2.imwrite('first_frame.jpg', frame)
@@ -79,16 +82,15 @@ if video_file is not None:
     # Do something interesting with the image data and paths
     #if canvas_result.image_data is not None:
     #    st.image(canvas_result.image_data)
- 
-    if len(canvas_result.json_data['objects'])==1:
-        for i in range(detection_range):
-            p = []
-            for j in range(2):
-                p.append(canvas_result.json_data['objects'][0]['path'][i][j+1])
-            det_box.append(p)
-        print(len(det_box))
-
-
+    if canvas_result.image_data is not None:
+        if len(canvas_result.json_data['objects'])==1:
+            for i in range(detection_range):
+                p = []
+                for j in range(2):
+                    p.append(canvas_result.json_data['objects'][0]['path'][i][j+1])
+                det_box.append(p)
+            print(len(det_box))
+            
 
 process_button = st.button('Proccess video')
 
