@@ -9,8 +9,7 @@ from PIL import Image
 from streamlit_drawable_canvas import st_canvas
 import os
 
-det_box = []
-
+det_points = []
 
 path_base = os.path.abspath(os.path.dirname(__file__))
 uploads_path = os.path.join(path_base, 'uploads')
@@ -29,7 +28,7 @@ def load_model(model_path):
     model = YOLO(model_path)
     return model
 
-def draw_det_box(video_file):
+def draw_det_area(video_file):
     """
     Draw a rectangle in first frame of video file to select
     detection area
@@ -40,7 +39,10 @@ def draw_det_box(video_file):
     Returns:
         List[int] with 4 points of detection box 
     """
-    det_box = []
+    det_points = []
+    det_type = st.selectbox('Detection type', ['Box', 'Line'], help='Select detection area type')
+    if det_type == 'Box': drawing_mode = 'polygon'
+    if det_type == 'Line': drawing_mode = 'line'
     vidcap = cv2.VideoCapture(video_file) # load video from disk
     w, h = (int(vidcap.get(x)) for x in (cv2.CAP_PROP_FRAME_WIDTH, cv2.CAP_PROP_FRAME_HEIGHT))
     w = int(w/2.8)
@@ -48,10 +50,10 @@ def draw_det_box(video_file):
     success, frame = vidcap.read()
     if success:
         frame = cv2.resize(frame, (w, h))
-        bg_image = cv2.imwrite('first_frame.jpg', frame)
+        bg_image = cv2.imwrite(os.path.join(uploads_path, 'first_frame.jpg'), frame)
     
     bg_color = "#eee"
-    bg_image = 'first_frame.jpg'
+    bg_image = os.path.join(uploads_path, 'first_frame.jpg')
     
     canvas_result = st_canvas(
     fill_color="rgba(255, 165, 0, 0.3)",  # Fixed fill color with some opacity
@@ -62,20 +64,34 @@ def draw_det_box(video_file):
     update_streamlit=True,
     height= h,
     width = w,
-    drawing_mode='polygon',
+    drawing_mode=drawing_mode,
     display_toolbar= True,
     key="canvas",
     )
    
     if canvas_result.image_data is not None:
-        if len(canvas_result.json_data['objects'])==1:
+        if len(canvas_result.json_data['objects'])==1 and det_type == 'Box':
             for i in range(4):
                 p = []
                 for j in range(2):
                     p.append(canvas_result.json_data['objects'][0]['path'][i][j+1])
-                det_box.append(p)
+                det_points.append(p)
+        if len(canvas_result.json_data['objects'])==1 and det_type == 'Line':        
+            objects = canvas_result.json_data.get('objects')
+            if objects and len(objects) == 1:
+                obj = objects[0]
+                left = obj.get('left', 0)
+                top = obj.get('top', 0)
+                x1 = left + obj.get('x1', 0)
+                y1 = top + obj.get('y1', 0)
+                x2 = left + obj.get('x2', 0)
+                y2 = top + obj.get('y2', 0)
+                det_points = [(x1, y1), (x2, y2)]
+                print(det_points)        
+    
     os.remove(bg_image)
-    return (det_box, w, h)
+    return (det_points, w, h)
+
 
 #Main page title
 st.title("Objects count in video using YOLO")
@@ -96,21 +112,21 @@ video_file = st.file_uploader('Video File')
 
 
 st_frame = st.empty()
+
+
 process_button = st.button('Proccess video')
 
 if video_file is not None:
     vid = os.path.join(uploads_path, video_file.name )
     with open(vid, mode='wb') as f:
         f.write(video_file.read()) # save video to disk
-    det_box, w, h = draw_det_box(vid)
-
-
+        det_points, w, h = draw_det_area(vid)
 
 if process_button==True:
     # Init Object Counter
     counter = object_counter.ObjectCounter()
     counter.set_args(view_img=True,
-                 reg_pts=det_box,
+                 reg_pts=det_points,
                  classes_names=model.names,
                  draw_tracks=True)
     vid_cap = cv2.VideoCapture(vid)
