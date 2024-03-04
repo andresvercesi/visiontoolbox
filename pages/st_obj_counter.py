@@ -50,17 +50,18 @@ def draw_det_area(video_file):
     success, frame = vidcap.read()
     if success:
         frame = cv2.resize(frame, (w, h))
-        first_frame = cv2.imwrite(os.path.join(uploads_path, 'first_frame.jpg'), frame)
+        cv2.imwrite(os.path.join(uploads_path, 'first_frame.jpg'), frame)
     
     bg_color = "#eee"
-    bg_image = os.path.join(uploads_path, 'first_frame.jpg')
-    
+    bg_image_path = os.path.join(uploads_path, 'first_frame.jpg')
+    bg_image = Image.open(bg_image_path)
+
     canvas_result = st_canvas(
     fill_color="rgba(255, 165, 0, 0.3)",  # Fixed fill color with some opacity
     stroke_width=3,
     stroke_color="#FB0101",
     background_color=bg_color,
-    background_image=Image.open(bg_image),
+    background_image=bg_image,
     update_streamlit=True,
     height= h,
     width = w,
@@ -68,7 +69,8 @@ def draw_det_area(video_file):
     display_toolbar= True,
     key="canvas",
     )
-   
+    
+    
     if canvas_result.image_data is not None:
         if len(canvas_result.json_data['objects'])==1 and det_type == 'Box':
             for i in range(4):
