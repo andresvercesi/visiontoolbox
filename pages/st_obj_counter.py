@@ -60,7 +60,7 @@ def draw_det_area(video_file):
     stroke_width=3,
     stroke_color="#FB0101",
     background_color=bg_color,
-    background_image=Image.open(bg_image) if bg_image else None,
+    background_image=Image.open(bg_image),
     update_streamlit=True,
     height= h,
     width = w,
@@ -89,7 +89,7 @@ def draw_det_area(video_file):
                 det_points = [(x1, y1), (x2, y2)]
                 print(det_points)        
     
-    os.remove(bg_image)
+    #os.remove(bg_image)
     return (det_points, w, h)
 
 
