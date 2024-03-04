@@ -50,7 +50,7 @@ def draw_det_area(video_file):
     success, frame = vidcap.read()
     if success:
         frame = cv2.resize(frame, (w, h))
-        bg_image = cv2.imwrite(os.path.join(uploads_path, 'first_frame.jpg'), frame)
+        first_frame = cv2.imwrite(os.path.join(uploads_path, 'first_frame.jpg'), frame)
     
     bg_color = "#eee"
     bg_image = os.path.join(uploads_path, 'first_frame.jpg')
