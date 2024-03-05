@@ -73,19 +73,19 @@ def draw_det_area(bg_image_path):
     bg_color = "#eee"
     #bg_image_path = os.path.join(uploads_path, 'first_frame.jpg')
     bg_image = Image.open(bg_image_path)
-    st.image(bg_image)
+    #st.image(bg_image)
     canvas_result = st_canvas(
         fill_color="rgba(255, 165, 0, 0.3)",  # Fixed fill color with some opacity
         stroke_width=3,
         stroke_color="#FB0101",
-        background_color=bg_color,
+        background_color="",
         background_image=bg_image,
         update_streamlit=True,
         height= h,
         width = w,
         drawing_mode=drawing_mode,
         display_toolbar= True,
-        key="canvas",
+        key="draw_det_area",
         )
     
     
