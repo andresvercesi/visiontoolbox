@@ -28,7 +28,25 @@ def load_model(model_path):
     model = YOLO(model_path)
     return model
 
-def draw_det_area(video_file):
+def capture_fframe(video_file):
+    """
+    Capture and save first frame of video in a jpg image
+
+    Parameters:
+        video_file (str): The path of video file
+    
+    Returns:
+        Path of saved image (str)
+    """
+    vidcap = cv2.VideoCapture(video_file)
+    success, frame = vidcap.read()
+    if success:
+        frame = cv2.resize(frame, (640, 384))
+        cv2.imwrite('first_frame.jpg', frame)
+    frame_path = 'first_frame.jpg'
+    return frame_path
+
+def draw_det_area(bg_image_path):
     """
     Draw a rectangle in first frame of video file to select
     detection area
@@ -43,32 +61,32 @@ def draw_det_area(video_file):
     det_type = st.selectbox('Detection type', ['Box', 'Line'], help='Select detection area type')
     if det_type == 'Box': drawing_mode = 'polygon'
     if det_type == 'Line': drawing_mode = 'line'
-    vidcap = cv2.VideoCapture(video_file) # load video from disk
-    w, h = (int(vidcap.get(x)) for x in (cv2.CAP_PROP_FRAME_WIDTH, cv2.CAP_PROP_FRAME_HEIGHT))
-    w = int(w/2.8)
-    h = int(h/2.8)
-    success, frame = vidcap.read()
-    if success:
-        frame = cv2.resize(frame, (w, h))
-        cv2.imwrite(os.path.join(uploads_path, 'first_frame.jpg'), frame)
+    #vidcap = cv2.VideoCapture(video_file) # load video from disk
+    #w, h = (int(vidcap.get(x)) for x in (cv2.CAP_PROP_FRAME_WIDTH, cv2.CAP_PROP_FRAME_HEIGHT))
+    w = 640
+    h = 384
+    #success, frame = vidcap.read()
+    #if success:
+    #    frame = cv2.resize(frame, (w, h))
+    #    cv2.imwrite(os.path.join(uploads_path, 'first_frame.jpg'), frame)
     
     bg_color = "#eee"
-    bg_image_path = os.path.join(uploads_path, 'first_frame.jpg')
+    #bg_image_path = os.path.join(uploads_path, 'first_frame.jpg')
     bg_image = Image.open(bg_image_path)
     st.image(bg_image)
     canvas_result = st_canvas(
-    fill_color="rgba(255, 165, 0, 0.3)",  # Fixed fill color with some opacity
-    stroke_width=3,
-    stroke_color="#FB0101",
-    background_color=bg_color,
-    background_image=bg_image,
-    update_streamlit=True,
-    height= h,
-    width = w,
-    drawing_mode=drawing_mode,
-    display_toolbar= True,
-    key="canvas",
-    )
+        fill_color="rgba(255, 165, 0, 0.3)",  # Fixed fill color with some opacity
+        stroke_width=3,
+        stroke_color="#FB0101",
+        background_color=bg_color,
+        background_image=bg_image,
+        update_streamlit=True,
+        height= h,
+        width = w,
+        drawing_mode=drawing_mode,
+        display_toolbar= True,
+        key="canvas",
+        )
     
     
     if canvas_result.image_data is not None:
@@ -122,7 +140,9 @@ if video_file is not None:
     vid = os.path.join(uploads_path, video_file.name )
     with open(vid, mode='wb') as f:
         f.write(video_file.read()) # save video to disk
-        det_points, w, h = draw_det_area(vid)
+        frame = capture_fframe(vid)
+        print(frame)
+    det_points, w, h = draw_det_area(frame)
 
 if process_button==True:
     # Init Object Counter
