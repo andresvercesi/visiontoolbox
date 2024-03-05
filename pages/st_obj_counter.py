@@ -8,8 +8,11 @@ import pandas as pd
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
 import os
+from vidgear.gears import CamGear
 
 det_points = []
+
+url = 'http://152.92.155.15/mjpg/video.mjpg'
 
 path_base = os.path.abspath(os.path.dirname(__file__))
 uploads_path = os.path.join(path_base, 'uploads')
@@ -125,24 +128,36 @@ except Exception as ex:
     st.error(
         f"Unable to load model. Check the specified path: {model_path}")
     st.error(ex)
-
-
-
-video_file = st.file_uploader('Video File')
-
-
 st_frame = st.empty()
+
+input_type = st.selectbox('Input video to proccess', ['Upload File', 'Youtube'])
+
+if input_type=='Youtube':
+    youtube_url = st.text_input('Youtube video URL', value="")
+    if youtube_url!="":
+        stream = CamGear(source=youtube_url, stream_mode = True, logging=True).start() # YouTube Video URL as input
+        frame = stream.read()
+        cv2.imwrite('first_frame.jpg', frame)
+        # read frames
+        det_points, w, h = draw_det_area('first_frame.jpg')
+        cv2.imshow("Output Frame", frame)
+
+if input_type=='Upload File':
+    video_file = st.file_uploader('Video File')
+    if video_file is not None:
+        vid = os.path.join(uploads_path, video_file.name )
+        with open(vid, mode='wb') as f:
+            f.write(video_file.read()) # save video to disk
+            frame = capture_fframe(vid)
+            print(frame)
+        det_points, w, h = draw_det_area(frame)
+
+
 
 
 process_button = st.button('Proccess video')
 
-if video_file is not None:
-    vid = os.path.join(uploads_path, video_file.name )
-    with open(vid, mode='wb') as f:
-        f.write(video_file.read()) # save video to disk
-        frame = capture_fframe(vid)
-        print(frame)
-    det_points, w, h = draw_det_area(frame)
+
 
 if process_button==True:
     # Init Object Counter
@@ -151,24 +166,55 @@ if process_button==True:
                  reg_pts=det_points,
                  classes_names=model.names,
                  draw_tracks=True)
-    vid_cap = cv2.VideoCapture(vid)
     
-    while (vid_cap.isOpened()):
-        success, image = vid_cap.read()
-        if success:
-            image = cv2.resize(image, (w, h))
-            tracks = model.track(image, persist=True, show=False)
-            frame = counter.start_counting(image, tracks)
-            #res = model.predict(image)
-            #result_tensor = res[0].boxes
-            #res_plotted = res[0].plot()
-            st_frame.image(image,
+    if input_type== 'Upload File':
+        vid_cap = cv2.VideoCapture(vid)
+    
+        while (vid_cap.isOpened()):
+            success, image = vid_cap.read()
+            if success:
+                image = cv2.resize(image, (w, h))
+                tracks = model.track(image, persist=True, show=False)
+                frame = counter.start_counting(image, tracks)
+                #res = model.predict(image)
+                #result_tensor = res[0].boxes
+                #res_plotted = res[0].plot()
+                st_frame.image(image,
                             caption='Detected Video',
                             channels="BGR",
                             use_column_width=True
                             )
-        else:
-            vid_cap.release()
-            break
+            else:
+                vid_cap.release()
+                break
+    if input_type== 'Youtube':
+        while True:
+    
+            frame = stream.read()
+            # read frames
+            frame = cv2.resize(frame, (w, h))
+            tracks = model.track(frame, persist=True, show=False)
+            frame = counter.start_counting(frame, tracks)
+            #res = model.predict(image)
+            #result_tensor = res[0].boxes
+            #res_plotted = res[0].plot()
+            st_frame.image(frame,
+                            caption='Detected Video',
+                            channels="BGR",
+                            use_column_width=True
+                            )
+
+            # check if frame is None
+            if frame is None:
+            #if True break the infinite loop
+                break
+    
+            # do something with frame here
+    
+            
+
+cv2.destroyAllWindows()
+# close output window
+
 
 
