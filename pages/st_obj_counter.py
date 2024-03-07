@@ -14,6 +14,9 @@ det_points = []
 
 url = 'http://152.92.155.15/mjpg/video.mjpg'
 
+# set desired quality as 360p
+options_stream = {"STREAM_RESOLUTION": "360p"}
+
 path_base = os.path.abspath(os.path.dirname(__file__))
 uploads_path = os.path.join(path_base, 'uploads')
 model_path = 'yolov8n.pt'
@@ -128,28 +131,31 @@ except Exception as ex:
     st.error(
         f"Unable to load model. Check the specified path: {model_path}")
     st.error(ex)
-st_frame = st.empty()
+
 
 input_type = st.selectbox('Input video to proccess', ['Upload File', 'Youtube'])
+
 
 if input_type=='Youtube':
     youtube_url = st.text_input('Youtube video URL', value="")
     if youtube_url!="":
-        stream = CamGear(source=youtube_url, stream_mode = True, logging=True).start() # YouTube Video URL as input
+        stream = CamGear(source=youtube_url, stream_mode = True, logging=True, **options_stream).start() # YouTube Video URL as input
         frame = stream.read()
         cv2.imwrite('first_frame.jpg', frame)
         # read frames
+        st_frame = st.empty()
         det_points, w, h = draw_det_area('first_frame.jpg')
         cv2.imshow("Output Frame", frame)
 
 if input_type=='Upload File':
     video_file = st.file_uploader('Video File')
+    skip_frames = st.number_input('Frames to skip in proccess', min_value=0, value=3)
     if video_file is not None:
         vid = os.path.join(uploads_path, video_file.name )
         with open(vid, mode='wb') as f:
             f.write(video_file.read()) # save video to disk
             frame = capture_fframe(vid)
-            print(frame)
+        st_frame = st.empty()
         det_points, w, h = draw_det_area(frame)
 
 
@@ -167,23 +173,25 @@ if process_button==True:
                  classes_names=model.names,
                  draw_tracks=True)
     
-    if input_type== 'Upload File':
+    if input_type == 'Upload File':
         vid_cap = cv2.VideoCapture(vid)
-    
+        frame_count = 0
         while (vid_cap.isOpened()):
             success, image = vid_cap.read()
             if success:
                 image = cv2.resize(image, (w, h))
-                tracks = model.track(image, persist=True, show=False)
+                # Skip frames to speed up processing
+                frame_count += 1
+                if frame_count % skip_frames != 0:
+                    continue
+                tracks = model.track(image, persist=True, show=True)
                 frame = counter.start_counting(image, tracks)
-                #res = model.predict(image)
-                #result_tensor = res[0].boxes
-                #res_plotted = res[0].plot()
                 st_frame.image(image,
                             caption='Detected Video',
                             channels="BGR",
                             use_column_width=True
                             )
+                
             else:
                 vid_cap.release()
                 break
@@ -195,9 +203,6 @@ if process_button==True:
             frame = cv2.resize(frame, (w, h))
             tracks = model.track(frame, persist=True, show=False)
             frame = counter.start_counting(frame, tracks)
-            #res = model.predict(image)
-            #result_tensor = res[0].boxes
-            #res_plotted = res[0].plot()
             st_frame.image(frame,
                             caption='Detected Video',
                             channels="BGR",
