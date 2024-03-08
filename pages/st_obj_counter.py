@@ -9,6 +9,7 @@ from PIL import Image
 from streamlit_drawable_canvas import st_canvas
 import os
 from vidgear.gears import CamGear
+from cap_from_youtube import cap_from_youtube
 
 det_points = []
 
@@ -139,8 +140,10 @@ input_type = st.selectbox('Input video to proccess', ['Upload File', 'Youtube'])
 if input_type=='Youtube':
     youtube_url = st.text_input('Youtube video URL', value="")
     if youtube_url!="":
-        stream = CamGear(source=youtube_url, stream_mode = True, logging=True, **options_stream).start() # YouTube Video URL as input
-        frame = stream.read()
+        #stream = CamGear(source=youtube_url, stream_mode = True, logging=True, **options_stream).start() # YouTube Video URL as input
+        #frame = stream.read()
+        cap = cap_from_youtube(youtube_url)
+        ret, frame = cap.read()
         cv2.imwrite('first_frame.jpg', frame)
         # read frames
         st_frame = st.empty()
@@ -197,8 +200,8 @@ if process_button==True:
                 break
     if input_type== 'Youtube':
         while True:
-    
-            frame = stream.read()
+            ret, frame = cap.read()
+            #frame = stream.read()
             # read frames
             frame = cv2.resize(frame, (w, h))
             tracks = model.track(frame, persist=True, show=False)
