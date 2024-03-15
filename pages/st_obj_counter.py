@@ -11,7 +11,7 @@ import os
 from vidgear.gears import CamGear
 from cap_from_youtube import cap_from_youtube
 
-det_points = []
+#det_points = []
 
 url = 'http://152.92.155.15/mjpg/video.mjpg'
 
@@ -123,6 +123,10 @@ def draw_det_area(bg_image_path):
 #Main page title
 st.title("Objects count in video using YOLO")
 
+if 'det_points' not in st.session_state:
+    st.session_state['det_points'] = []
+    det_points = []
+
 if not os.path.exists(uploads_path):
     os.makedirs(uploads_path)
 
@@ -140,28 +144,30 @@ input_type = st.selectbox('Input video to proccess', ['Upload File', 'Youtube'])
 if input_type=='Youtube':
     youtube_url = st.text_input('Youtube video URL', value="")
     if youtube_url!="":
-        #stream = CamGear(source=youtube_url, stream_mode = True, logging=True, **options_stream).start() # YouTube Video URL as input
-        #frame = stream.read()
-        cap = cap_from_youtube(youtube_url)
-        ret, frame = cap.read()
+        stream = CamGear(source=youtube_url, stream_mode = True, logging=True, **options_stream).start() # YouTube Video URL as input
+        frame = stream.read()
+        #cap = cap_from_youtube(youtube_url)
+        #ret, frame = cap.read()
         cv2.imwrite('first_frame.jpg', frame)
         # read frames
         st_frame = st.empty()
-        det_points, w, h = draw_det_area('first_frame.jpg')
+        if st.session_state['det_points'] == []:
+            det_points, w, h = draw_det_area('first_frame.jpg')
+            st.session_state[det_points] = det_points
         cv2.imshow("Output Frame", frame)
 
-if input_type=='Upload File':
-    video_file = st.file_uploader('Video File')
+if input_type == 'Upload File':
+    video_file = st.file_uploader('Video File', type=['mp4', 'mov', 'avi'])
     skip_frames = st.number_input('Frames to skip in proccess', min_value=0, value=3)
     if video_file is not None:
         vid = os.path.join(uploads_path, video_file.name )
         with open(vid, mode='wb') as f:
-            f.write(video_file.read()) # save video to disk
+            f.write(video_file.getbuffer()) # save video to disk
             frame = capture_fframe(vid)
         st_frame = st.empty()
         det_points, w, h = draw_det_area(frame)
 
-
+st.write(st.session_state)
 
 
 process_button = st.button('Proccess video')
@@ -171,9 +177,11 @@ process_button = st.button('Proccess video')
 if process_button==True:
     # Init Object Counter
     counter = object_counter.ObjectCounter()
-    counter.set_args(view_img=True,
+    counter.set_args(view_img=False,
                  reg_pts=det_points,
                  classes_names=model.names,
+                 view_in_counts=True,
+                 view_out_counts=True,
                  draw_tracks=True)
     
     if input_type == 'Upload File':
@@ -187,8 +195,8 @@ if process_button==True:
                 frame_count += 1
                 if frame_count % skip_frames != 0:
                     continue
-                tracks = model.track(image, persist=True, show=True)
-                frame = counter.start_counting(image, tracks)
+                tracks = model.track(image, persist=True, show=False)
+                image = counter.start_counting(image, tracks)
                 st_frame.image(image,
                             caption='Detected Video',
                             channels="BGR",
@@ -200,8 +208,8 @@ if process_button==True:
                 break
     if input_type== 'Youtube':
         while True:
-            ret, frame = cap.read()
-            #frame = stream.read()
+            #ret, frame = cap.read()
+            frame = stream.read()
             # read frames
             frame = cv2.resize(frame, (w, h))
             tracks = model.track(frame, persist=True, show=False)
