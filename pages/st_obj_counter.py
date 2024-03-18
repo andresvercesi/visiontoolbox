@@ -9,11 +9,9 @@ from PIL import Image
 from streamlit_drawable_canvas import st_canvas
 import os
 from vidgear.gears import CamGear
-from cap_from_youtube import cap_from_youtube
+#from cap_from_youtube import cap_from_youtube
 
-#det_points = []
-
-url = 'http://152.92.155.15/mjpg/video.mjpg'
+det_points = []
 
 # set desired quality as 360p
 options_stream = {"STREAM_RESOLUTION": "360p"}
@@ -68,8 +66,6 @@ def draw_det_area(bg_image_path):
     det_type = st.selectbox('Detection type', ['Box', 'Line'], help='Select detection area type')
     if det_type == 'Box': drawing_mode = 'polygon'
     if det_type == 'Line': drawing_mode = 'line'
-    #vidcap = cv2.VideoCapture(video_file) # load video from disk
-    #w, h = (int(vidcap.get(x)) for x in (cv2.CAP_PROP_FRAME_WIDTH, cv2.CAP_PROP_FRAME_HEIGHT))
     w = 640
     h = 384
     #success, frame = vidcap.read()
@@ -123,10 +119,6 @@ def draw_det_area(bg_image_path):
 #Main page title
 st.title("Objects count in video using YOLO")
 
-if 'det_points' not in st.session_state:
-    st.session_state['det_points'] = []
-    det_points = []
-
 if not os.path.exists(uploads_path):
     os.makedirs(uploads_path)
 
@@ -142,7 +134,7 @@ input_type = st.selectbox('Input video to proccess', ['Upload File', 'Youtube'])
 
 
 if input_type=='Youtube':
-    youtube_url = st.text_input('Youtube video URL', value="")
+    youtube_url = st.text_input('Youtube video URL', value="https://www.youtube.com/watch?v=ByED80IKdIU")
     if youtube_url!="":
         stream = CamGear(source=youtube_url, stream_mode = True, logging=True, **options_stream).start() # YouTube Video URL as input
         frame = stream.read()
@@ -151,9 +143,7 @@ if input_type=='Youtube':
         cv2.imwrite('first_frame.jpg', frame)
         # read frames
         st_frame = st.empty()
-        if st.session_state['det_points'] == []:
-            det_points, w, h = draw_det_area('first_frame.jpg')
-            st.session_state[det_points] = det_points
+        det_points, w, h = draw_det_area('first_frame.jpg')
         cv2.imshow("Output Frame", frame)
 
 if input_type == 'Upload File':
@@ -167,7 +157,7 @@ if input_type == 'Upload File':
         st_frame = st.empty()
         det_points, w, h = draw_det_area(frame)
 
-st.write(st.session_state)
+#st.write(st.session_state['det_points'])
 
 
 process_button = st.button('Proccess video')
@@ -206,7 +196,8 @@ if process_button==True:
             else:
                 vid_cap.release()
                 break
-    if input_type== 'Youtube':
+    
+    if input_type == 'Youtube':
         while True:
             #ret, frame = cap.read()
             frame = stream.read()
